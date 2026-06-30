@@ -7,7 +7,6 @@ from sklearn.metrics import accuracy_score, classification_report
 import joblib
 
 
-# ─── Inference Functions — Required for Endpoint Serving ────
 def model_fn(model_dir):
     model = joblib.load(os.path.join(model_dir, "model.joblib"))
     return model
@@ -24,14 +23,10 @@ def input_fn(request_body, request_content_type):
     elif request_content_type == "application/json":
         data = json.loads(request_body)
 
-        # Supports: {"instances": [[39,13,40,2174,0,1,0]]}
         if "instances" in data:
             return pd.DataFrame(data["instances"]).values
-
-        # Also supports: {"age":39, "education_num":13, ...} (single record)
         elif isinstance(data, dict):
             return pd.DataFrame([data]).values
-
         else:
             raise ValueError("JSON must contain 'instances' key or be a flat dict")
 
@@ -51,17 +46,16 @@ def output_fn(prediction, content_type):
     preds = np.atleast_1d(prediction).tolist()
 
     if content_type == "application/json":
-        return json.dumps({"predictions": preds})
+        response_body = json.dumps({"predictions": preds})
+        return response_body, "application/json"   # ✅ explicit content-type
 
     else:
-        # Default to CSV-style plain text output
         output = io.StringIO()
         for p in preds:
             output.write(f"{p}\n")
-        return output.getvalue()
+        return output.getvalue(), "text/csv"         # ✅ explicit content-type
 
 
-# ─── Training Entry Point ───────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
