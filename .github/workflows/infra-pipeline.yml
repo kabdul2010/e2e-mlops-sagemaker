@@ -19,10 +19,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Setup Node.js (required for CDK CLI)
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'    
+          node-version: '22'
 
       - name: Install CDK CLI
         run: npm install -g aws-cdk
@@ -44,6 +44,52 @@ jobs:
         run: |
           cd cdk
           cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }} || true
+
+      - name: Wait for Previous Stack Operation to Complete
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          python - <<'EOF'
+          import boto3
+          import os
+
+          region = os.environ.get("AWS_REGION", "us-east-1")
+          cf     = boto3.client("cloudformation", region_name=region)
+
+          try:
+              response = cf.describe_stacks(StackName="AdultIncomeSageMakerStack")
+              status   = response["Stacks"][0]["StackStatus"]
+              print(f"Stack status: {status}")
+
+              if "DELETE_IN_PROGRESS" in status:
+                  print("⏳ Stack deletion in progress — waiting...")
+                  waiter = cf.get_waiter("stack_delete_complete")
+                  waiter.wait(
+                      StackName="AdultIncomeSageMakerStack",
+                      WaiterConfig={"Delay": 15, "MaxAttempts": 60}
+                  )
+                  print("✅ Stack deleted — ready for fresh deploy")
+
+              elif status in ["ROLLBACK_COMPLETE", "ROLLBACK_FAILED",
+                              "CREATE_FAILED", "DELETE_FAILED"]:
+                  print(f"⏳ Stack in {status} — deleting before redeploy...")
+                  cf.delete_stack(StackName="AdultIncomeSageMakerStack")
+                  waiter = cf.get_waiter("stack_delete_complete")
+                  waiter.wait(
+                      StackName="AdultIncomeSageMakerStack",
+                      WaiterConfig={"Delay": 15, "MaxAttempts": 60}
+                  )
+                  print("✅ Stack deleted — ready for fresh deploy")
+
+              else:
+                  print(f"✅ Stack in {status} — proceeding with deploy")
+
+          except cf.exceptions.ClientError as e:
+              if "does not exist" in str(e):
+                  print("✅ No existing stack — fresh deploy")
+              else:
+                  raise
+          EOF
 
       - name: CDK Diff
         env:
@@ -69,7 +115,7 @@ jobs:
 
       - name: Show Infra Outputs
         run: |
-          echo "CDK Stack Outputs:"
+          echo "✅ CDK Stack Outputs:"
           cat cdk_outputs.json
-          echo "Saved to S3:"
+          echo "✅ Saved to S3:"
           cat infra_outputs.json
