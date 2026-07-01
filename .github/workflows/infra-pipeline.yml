@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js (required for CDK CLI)
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'    # ✅ Fixed from 18 to 20
 
       - name: Install CDK CLI
         run: npm install -g aws-cdk
@@ -40,12 +40,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: CDK Bootstrap (one-time per account/region)
+      - name: CDK Bootstrap
         run: |
           cd cdk
           cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }} || true
 
-      - name: CDK Diff (show what will change)
+      - name: CDK Diff
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
