@@ -1,4 +1,4 @@
-name: Pipeline 3 - Deploy - Deploy Model to Endpoint
+name: Pipeline 3 - Deploy - Deploy Model to Endpoint v6
 
 on:
   workflow_dispatch:
