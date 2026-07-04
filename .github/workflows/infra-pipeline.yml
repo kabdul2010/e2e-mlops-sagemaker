@@ -1,9 +1,6 @@
 name: Pipeline 1 - Infra - Create SageMaker Studio
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
 
 jobs:
