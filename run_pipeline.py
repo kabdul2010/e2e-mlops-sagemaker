@@ -110,9 +110,8 @@ def run_pipeline():
         instance_type="ml.m5.large",
         instance_count=1,
         framework_version="1.2-1",
-        use_spot_instances=True,
+        use_spot_instances=False,
         max_run=3600,
-        max_wait=7200,
         sagemaker_session=session,
         hyperparameters={
             "n_estimators": 100,
