@@ -107,7 +107,7 @@ def run_pipeline():
         entry_point="train.py",
         source_dir="pipeline",
         role=role,
-        instance_type="ml.m5.xlarge",
+        instance_type="ml.m5.large",
         instance_count=1,
         framework_version="1.2-1",
         use_spot_instances=False,
